@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	baseUpstream = "http://calman02.barrierefrei.berlin/calendar/api/v1"
+	baseUpstream = "https://calman02.barrierefrei.berlin/calendar/api/v1"
 	cacheTTL     = 5 * time.Minute
 )
 
