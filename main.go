@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/tls"
 	"io"
 	"log"
 	"net/http"
@@ -23,10 +24,15 @@ var (
 	cache      = map[string]cacheEntry{}
 	cacheMutex sync.RWMutex
 
+	// HTTP client that ignores expired/invalid SSL certificates
 	httpClient = &http.Client{
 		Timeout: 10 * time.Second,
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		},
 	}
 
+	// Only allow numeric event IDs
 	eventIDRegex = regexp.MustCompile(`^[0-9]+$`)
 )
 
@@ -52,6 +58,7 @@ func main() {
 	log.Fatal(server.ListenAndServe())
 }
 
+// Proxy static endpoints
 func proxyStatic(path string) http.HandlerFunc {
 	upstream := baseUpstream + path
 
@@ -64,6 +71,7 @@ func proxyStatic(path string) http.HandlerFunc {
 	}
 }
 
+// Handle /event/{id}
 func eventByIDHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -72,7 +80,6 @@ func eventByIDHandler(w http.ResponseWriter, r *http.Request) {
 
 	id := r.URL.Path[len("/api/calendar/event/"):]
 
-	// Strict validation
 	if !eventIDRegex.MatchString(id) {
 		http.Error(w, "Invalid event id", http.StatusBadRequest)
 		return
@@ -82,8 +89,8 @@ func eventByIDHandler(w http.ResponseWriter, r *http.Request) {
 	serveCached(w, upstream)
 }
 
+// Serve response with in-memory cache
 func serveCached(w http.ResponseWriter, upstream string) {
-	// Cache lookup
 	cacheMutex.RLock()
 	entry, ok := cache[upstream]
 	if ok && time.Now().Before(entry.until) {
@@ -125,6 +132,7 @@ func serveCached(w http.ResponseWriter, upstream string) {
 	w.Write(body)
 }
 
+// Add basic CORS support
 func withCORS(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -135,6 +143,7 @@ func withCORS(next http.Handler) http.Handler {
 			w.WriteHeader(http.StatusNoContent)
 			return
 		}
+
 		next.ServeHTTP(w, r)
 	})
 }
