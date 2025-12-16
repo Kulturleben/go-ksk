@@ -40,11 +40,11 @@ func main() {
 	mux := http.NewServeMux()
 
 	// Static endpoints
-	mux.HandleFunc("/calendar/api/v1/events", proxyStatic("/events?show_past=true"))
-	mux.HandleFunc("/calendar/api/v1/genres", proxyStatic("/genres"))
+	mux.HandleFunc("/api/v1/events", proxyStatic("/events?show_past=true"))
+	mux.HandleFunc("/api/v1/genres", proxyStatic("/genres"))
 
 	// Dynamic endpoint
-	mux.HandleFunc("/calendar/api/v1/event/", eventByIDHandler)
+	mux.HandleFunc("/api/v1/event/", eventByIDHandler)
 
 	server := &http.Server{
 		Addr:         ":3000",
@@ -78,7 +78,7 @@ func eventByIDHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id := r.URL.Path[len("/calendar/api/v1/event/"):]
+	id := r.URL.Path[len("/api/v1/event/"):]
 
 	if !eventIDRegex.MatchString(id) {
 		http.Error(w, "Invalid event id", http.StatusBadRequest)
