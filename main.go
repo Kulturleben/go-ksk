@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/tls"
+	"strings"
 	"io"
 	"log"
 	"net/http"
@@ -43,8 +44,8 @@ func main() {
 	mux.HandleFunc("/api/v1/events", proxyStatic("/events?show_past=true"))
 	mux.HandleFunc("/api/v1/genres", proxyStatic("/genres"))
 
-	// Dynamic endpoint
-	mux.HandleFunc("/api/v1/event/", eventByIDHandler)
+	// Dynamic endpoint (event details and accessibility)
+	mux.HandleFunc("/api/v1/event/", eventHandler)
 
 	server := &http.Server{
 		Addr:         ":3000",
@@ -72,13 +73,29 @@ func proxyStatic(path string) http.HandlerFunc {
 }
 
 // Handle /event/{id}
-func eventByIDHandler(w http.ResponseWriter, r *http.Request) {
+func eventHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	id := r.URL.Path[len("/api/v1/event/"):]
+	const base = "/api/v1/event/"
+	path := r.URL.Path
+
+	if !strings.HasPrefix(path, base) {
+		http.NotFound(w, r)
+		return
+	}
+
+	isAccessibility := strings.HasSuffix(path, "/accessibility")
+
+	var id string
+	if isAccessibility {
+		// Extract ID between base and "/accessibility"
+		id = strings.TrimSuffix(path[len(base):], "/accessibility")
+	} else {
+		id = path[len(base):]
+	}
 
 	if !eventIDRegex.MatchString(id) {
 		http.Error(w, "Invalid event id", http.StatusBadRequest)
@@ -86,6 +103,10 @@ func eventByIDHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	upstream := baseUpstream + "/event/" + id
+	if isAccessibility {
+		upstream += "/accessibility"
+	}
+
 	serveCached(w, upstream)
 }
 
