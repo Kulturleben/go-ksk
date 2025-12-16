@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	baseUpstream = "https://calman02.barrierefrei.berlin/calendar/api/v1"
+	baseUpstream = "https://calman.barrierefrei.berlin/calendar/api/v1"
 	cacheTTL     = 5 * time.Minute
 )
 
@@ -40,11 +40,11 @@ func main() {
 	mux := http.NewServeMux()
 
 	// Static endpoints
-	mux.HandleFunc("/api/calendar/events", proxyStatic("/events?show_past=true"))
-	mux.HandleFunc("/api/calendar/genres", proxyStatic("/genres"))
+	mux.HandleFunc("/calendar/events", proxyStatic("/events?show_past=true"))
+	mux.HandleFunc("/calendar/genres", proxyStatic("/genres"))
 
 	// Dynamic endpoint
-	mux.HandleFunc("/api/calendar/event/", eventByIDHandler)
+	mux.HandleFunc("/calendar/event/", eventByIDHandler)
 
 	server := &http.Server{
 		Addr:         ":3000",
@@ -78,7 +78,7 @@ func eventByIDHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id := r.URL.Path[len("/api/calendar/event/"):]
+	id := r.URL.Path[len("/calendar/event/"):]
 
 	if !eventIDRegex.MatchString(id) {
 		http.Error(w, "Invalid event id", http.StatusBadRequest)
